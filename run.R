@@ -4,11 +4,56 @@
 #' date: "09/01/2017"
 #' ---
 #' 
+#' Please read this file through before trying to run it. The comments tell
+#' you what you need to edit in order to proceed.
+#' 
 #' ## Load libraries
-require(magrittr); require("dtplyr"); require(dplyr);
-require("ggplot2");require('readr');
+#+ warning=FALSE, message=FALSE
+rq_libs <- c(
+             #'compiler'                              # just-in-time compilation
+             #,'survival','MASS','Hmisc','zoo','coin' # various analysis methods
+             'readr','dplyr','stringr','magrittr'   # data manipulation & piping
+             ,'ggplot2','ggfortify','grid','GGally'  # plotting
+             ,'stargazer','broom','janitor','tableone');                  # table formatting
+rq_installed <- sapply(rq_libs,require,character.only=T);
+rq_need <- names(rq_installed[!rq_installed]);
+if(length(rq_need)>0) install.packages(rq_need,repos='https://cran.rstudio.com/',dependencies = T);
+sapply(rq_need,require,character.only=T);
+#' Turn JIT to max: pre-compile all closures, `for`, `while`, and `repeat` loops
+#not needed yet
+#enableJIT(3);
 #' ## Load local config file
+#' 
+#' Please edit the file referenced below, it has instructions in the 
+#' comments.
 source('./config.R');
+#' Please edit the file referenced below, it has instructions in the
+#' comments
+#not used yet
+#source('./metadata.R');
+#' This file has some possible useful functions. You might not need to edit
+#' it but should read it.
+source('./functions.R');
+
+#'
+#' ## Set generic variables
+#' 
+#' data dictionary:
+#not needed yet
+dctfile = '';
+#' saved session data (not used right now)
+#not needed yet
+session <- 'session.rdata';
+
+#' ## Load data if it exists 
+#' 
+#' (useful later, right now don't bother saving sessions)
+if(session %in% list.files()) load(session);
+#' Load your data. Notice that we're using `read_csv()` from the readr library.
+#' It is a little smarter than the built-in `read.csv()`
+d0 <- read_tsv(inputdata,na=c('(null)',''));
+#' Read in the data dictionary
+if(dctfile %in% list.files()) dct0 <- read_csv(dctfile,na = '');
 #' ## Load data
 #' 
 #' This contains d0, which are counts by age, sex, and reference group
