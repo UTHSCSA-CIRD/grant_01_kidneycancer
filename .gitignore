@@ -4,6 +4,7 @@
 
 # Session Data files
 .RData
+.rdata
 
 # Example code in package build process
 *-Ex.R
@@ -31,3 +32,16 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+.Rproj.user
+*.Rproj
+*.Rout
+
+# Local configuration
+config.R
+
+# Other temp files
+.~lock.*#
+
+# We don't commit data unless we really mean it.
+*.csv
+
