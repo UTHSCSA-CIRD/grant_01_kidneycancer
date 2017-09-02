@@ -16,4 +16,5 @@
 #' Here is mine...
 workdir <- '/tmp/grant_01_kidneycancer/';
 #' ## Used by run.R. Please put a path to your nsqip CSV file here.
-inputdata <- '/home/your_home_directory/Documents/project_folder';
+inputdata <- '/home/your_home_directory/Documents/project_folder/datafile.csv';
+outputdir <- '/home/your_home_directory/Documents/project_folder/';

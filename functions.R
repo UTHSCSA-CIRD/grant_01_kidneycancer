@@ -175,4 +175,21 @@ raiscore.bak <- function(xx){
 #' Returns a list of column names from the data dictionary for which the column
 #' named in the first argument is true. The first arg can be either a string or 
 #' a name. The second must be a data.frame
-v <- function(var,dictionary=dct0) {cc<-substitute(var);na.omit(dictionary[dictionary[[as.character(cc)]],'dataset_column_names'])[[1]]}
+v <- function(...,DAT=dct0) {
+  args<-sys.call(); 
+  cols<-sapply(args,function(xx) parse(text=xx)[[1]])[-1];
+  cols$DAT <- NULL; 
+  oo<- DAT[
+      eval(
+        as.call(
+          c( as.name("pmin") , cols )
+        )
+        ,envir = DAT) > 0
+      ,'dataset_column_names'];
+  switch(class(oo)[1],factor=as.character(oo),tbl_df=oo[[1]],oo);
+  }
+
+v0 <- function(var,dictionary=dct0) {
+  cc<-substitute(var);
+  na.omit(dictionary[dictionary[[as.character(cc)]],'dataset_column_names'])[[1]]
+}
