@@ -75,6 +75,27 @@ grepor <- function(xx,patterns='.') {
   grep(paste0(patterns,collapse='|'),xx,val=T);
 }
 
+#' Take an object name \code{obj}, check to see if it  exists in environment \code{env}
+#' and if it does not, run \code{expression} \code{EXPR} and assign its result to \code{obj}
+#'
+#' @param obj   A \code{character} string (required) naming the variable in env
+#'   to which the results of running \code{EXPR} will be assigned.
+#' @param EXPR  An \code{expression} to execute and assign to the object named
+#'   by \code{obj} if it doesn't already exist.
+#' @param env   An \code{environment} to check for the existence of \code{obj}
+#'   and where to create it if it doesn't exist.
+#'
+#' @return Does not return anything.
+#'
+#' @examples `checkrun('dat3',{group_by(dat1,idn_mrn) %>% summarise_all(first)});`
+checkrun <- function(obj,EXPR,env=as.environment(-1)){
+  env<-env;
+  if(length(ls(env,all=T,pattern=obj))==0){
+    browser();
+  }
+}
+
+
 #' Delete all the junk in your environment, for testing
 clearenv <- function(env=.GlobalEnv) rm(list=setdiff(ls(all=T,envir=env),'clearenv'),envir=env);
 
@@ -114,8 +135,71 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   }
 } 
 
+mktabsie <- function(data,subsets=list(Full=T),pw
+                     ,vars
+                     ,filepath='.'
+                     ,filename='survSave.rdata'
+                     ,serverTitle='TABSIE'
+                     ,serverStatement=bquote(h4("Welcome to TABSIE"))){
+  serverData <- sapply(subsets,function(ii) subset(data[,vars],eval(ii)),simplify=F);
+  serverDataDic <- names(serverData);
+  serverHash <- digest::digest(pw,algo='sha512',ascii=TRUE);
+  save(serverStatement,serverData,serverDataDic,serverTitle,serverHash
+       ,file=paste0(filepath,'/',filename));
+}
+
+#' Returns a vector of column names that contain data elements of a particular type
+#' as specified by the user: "integer","POSIXct" "POSIXt", "numeric", "character", 
+#' "factor" and "logical". 
+vartype <- function(dat, ctype) {
+  xx <- unlist(sapply(dat, class));
+  idx <- which(xx %in% ctype);
+  res <- names(xx)[idx];
+  return(res)
+}
+
+#' ## Functions for RMarkdown and ggplot2
+#' 
+#' Return a commit hash (for inclusion in reports for example) after first making
+#' sure all changes are committed and pushed
+#' TODO: instead of auto-committing, error if uncommited changes, needs to be 
+#' a deliberate process, otherwise we have tons of meaningless auto-commit
+#' messages that will make future maintenance harder
+gitstamp <- function() {
+  stopifnot(length(system("git diff-index HEAD --",intern = T))==0);
+  system("git push && git log --pretty=format:'%h' -n 1",intern=T);
+}
+
+#' This function can be called from `stat_summary()` as the
+#' `fun.data=` argument. It will cause group counts to be 
+#' over-printed on a `geom_boxplot()` (probably other similar
+#' plots too) if `stat_summary()` is added to it.
+n_fun <- function(xx) data.frame(y=mean(quantile(xx,c(.5,.75))),label=as.character(length(xx)));
+
+#' take a list of subset criteria and return a list of data.frames
+ssply<-function(dat,...) sapply(sys.call()[-(1:2)],function(ii) subset(dat,eval(ii)),simplify=F);
+
 #' ### Specific to RAI-A
 #' 
+
+#' Return a tableone object formatted just the way we like it
+#' @param xx     A \code{data.frame} (required).
+#' @param vars   Vector of variable names to pass to \code{CreatTableOne} (optional)
+#' @param ...    Named expressions from which to create the strata variable
+#'               for \code{CreatTableOne} (only tested for one variable)
+stratatable <- function(xx,vars=NULL,...){
+  nmx <- names(xx);
+  xx <- transform(xx,...);
+  mystrata <- setdiff(names(xx),nmx);
+  res <- tableone::CreateTableOne(data=xx, vars= vars, strata=mystrata) %>% print;
+  # res[,'p'] %>%  gsub("<","", x=.) %>% trimws() %>%
+  #   as.numeric() %>% p.adjust() %>% cbind(res,padj=.) %>%
+  #   data.frame %>% dplyr::select(-test) -> res;
+  res[,'p'] %>%  gsub("<","", x=.) %>% trimws() %>%
+    as.numeric() %>% p.adjust() %>% cbind(res[,1:2],padj=.) -> res;
+  return(res);
+}
+
 
 #' Calculates the RAI score
 #' 
@@ -175,4 +259,4 @@ raiscore.bak <- function(xx){
 #' Returns a list of column names from the data dictionary for which the column
 #' named in the first argument is true. The first arg can be either a string or 
 #' a name. The second must be a data.frame
-v <- function(var,dictionary=dct0) {cc<-substitute(var);na.omit(dictionary[dictionary[[as.character(cc)]],'dataset_column_names'])[[1]]}
+v <- function(var,dictionary=dct0) {cc<-substitute(var);na.omit(dictionary[dictionary[[as.character(cc)]],'colname'])[[1]]}
