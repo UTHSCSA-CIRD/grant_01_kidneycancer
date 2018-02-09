@@ -6,6 +6,29 @@
 #' 
 source('global.R');
 
+#' ## Define metadata
+cls_tf <- c(
+'_Spnsh_Hspnc'
+,'_Mlgnt_nplsm'
+#,'_Mlgnt_nplsm_inactive'
+,'_Vtl_Sts'
+,'_Mlgnt_nplsm'
+#,'_Mlgnt_nplsm_inactive'
+,'_Dbts_mlts'
+#,'_Dbts_mlts_inactive'
+,'_Dcsd_pr_SS'
+,'_Dbts_mlts'
+#,'_Dbts_mlts_inactive'
+,'_Hspnc_or_Ltn'
+,'_Kdn_NS');
+
+cls_forlinkage <- c('patient_num','start_date','birth_date','sex_cd'
+                    ,'language_cd','race_cd','_Dcsd_pr_SS'
+                    ,'_Cs_of_Dth','_Vtl_Sts','_Brthplc','_Sx'
+                    ,'_Spnsh_Hspnc','_Mrtl_Sts_DX','_TNM_Cln_Dscrptr','_Rc'
+                    ,'_Kdn_NS');
+cls_canceremr <- '_Mlgnt_nplsm';
+
 #' ## Load data if it exists 
 #' 
 #' (useful later, right now don't bother saving sessions)
@@ -15,14 +38,41 @@ source('global.R');
 dat0 <- read_csv(inputdata,na=c('(null)',''));
 #' Read in the data dictionary
 dct0 <- read_csv(dctfile,na = '');
-dct0$naaccr <- dct0$rule=='naaccr';
+dct0$class <- sapply(dat0,function(xx) class(xx)[1])
+dct0$nunique <- sapply(dat0,function(xx) length(unique(na.omit(xx))));
+dct0$nna <- sapply(dat0,function(xx) sum(is.na(xx)));
+dct0$c_naaccr <- dct0$rule=='naaccr';
+dct0$c_extra <- grepl('_inactive$|_info$',dct0$colname);
+dct0$c_notanalytic <- grepl('_inactive$|_info$|^patient_num$',dct0$colname);
+dct0$c_date <- dct0$class %in% c('POSIXct','Date');
+dct0$c_tf <- with(dct0,(nunique==1|rule=='diag')&!c_notanalytic);
+dct0$c_canceremr <- dct0$locator %in% cls_canceremr;
 dct1 <- read_tsv(tcrcodes,na='');
 #colnames(dat0) <- tolower(colnames(dat0));
 #' Create copy of original dataset
 dat1 <- with(dat0,dat0[order(patient_num,age_at_visit_days),]) %>% 
-  group_by(patient_num) %>% 
-  # record for each patient their age at first diagnosis
-  mutate(a_aad=age_at_visit_days[which(!is.na(v001_Dt_of_Dgns))[1]]);
+  group_by(patient_num); #%>% 
+dat1[,v(c_tf)] <- lapply(dat1[,v(c_tf)],function(xx) !is.na(xx));
+dat1$a_canceremr <- apply(dat1[,v(c_canceremr)],1,any);
+
+#' ## Dataset for Linking
+#' 
+#' Linking = 
+#' * deathdates from UHS/SSDMF
+#' * annotating NAACCR codes,
+#' * adding EPIC IDs
+#' * adding addresses, zipcodes, cities
+dat2 <- dat0[,dct0$colname[dct0$locator %in% cls_forlinkage]];
+dat2 <- dat2[apply(dat2[,dct0$colname[dct0$locator %in% cls_forlinkage[-(1:6)]]],1
+              ,function(xx) !all(is.na(xx))),];
+dct20 <- subset(dct0,colname %in% colnames(dat2));
+#' 
+#' 
+#' 
+#' 
+#' # Starting here is old stuff, not necessarily usable for the new dataset
+# record for each patient their age at first diagnosis
+#mutate(a_aad=age_at_visit_days[which(!is.na(v001_Dt_of_Dgns))[1]]);
 #' Get rid of the extra quotes that somehow got into data
 sapply(intersect(names(dat1),v(removequotes)),function(ii) .GlobalEnv$dat1[[ii]] <- gsub('\"','',dat1[[ii]]));
 #' Remove the non-informative or redundant columns

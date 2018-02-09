@@ -12,6 +12,7 @@ rq_libs <- c('compiler'                                   # just-in-time compila
              ,'survival','MASS','Hmisc','zoo','coin'      # various analysis methods
              ,'readr','dplyr','stringr','magrittr'        # data manipulation & piping
              ,'ggplot2','ggfortify','grid','GGally'       # plotting
+             ,'gridExtra','scales'
              ,'stargazer','broom', 'tableone','janitor'); # table formatting
 rq_installed <- sapply(rq_libs,require,character.only=T);
 rq_need <- names(rq_installed[!rq_installed]);

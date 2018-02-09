@@ -99,6 +99,62 @@ checkrun <- function(obj,EXPR,env=as.environment(-1)){
 #' Delete all the junk in your environment, for testing
 clearenv <- function(env=.GlobalEnv) rm(list=setdiff(ls(all=T,envir=env),'clearenv'),envir=env);
 
+#' Plots in the style we've been doing (continuous y, discrete x and optionally z)
+#' 
+#' Instead of creating new tables for 'All', just set xx=T
+#' 
+#' To suppress plotting of a legend (but still use fill) set fill.name=NA
+#' Likewise, to suppress printing y-axis labels make yy.name=NA
+#' To merely omit printing a name, set the name in question to ''
+autoboxplot <- function(pdata, xx, yy, zz, subset=T
+                        , type=c('box','violin')
+                        , title=sprintf('%s vs %s\n by %s',xx,yy,zz)
+                        , xx.name=if(xx==TRUE) 'All' else xx, xx.breaks=if(xx==TRUE) xx else unique(pdata[[xx]])
+                        , xx.labels=if(xx==TRUE) '' else xx.breaks
+                        , yy.name=yy, yy.labels
+                        , fill.name, fill.breaks, fill.labels
+                        , counts=T
+                        ,...){
+  subset <- substitute(subset);
+  plot_type <- switch(match.arg(type)
+                      ,box=geom_boxplot(coef=100)
+                      ,violin=geom_violin());
+  pdata <- subset(pdata,subset=eval(subset));
+  if(!missing(zz)){
+    if(missing(fill.name)) fill.name <- zz;
+    if(missing(fill.breaks)) fill.breaks <- unique(pdata[[zz]]);
+    if(missing(fill.labels)) fill.labels <- fill.breaks;
+    fill <- if(is.atomic(fill.name)&&is.na(fill.name)) scale_fill_discrete(guide=F) else {
+      scale_fill_discrete(name=fill.name,breaks=fill.breaks,labels=fill.labels);
+    }
+  }
+  if(missing(yy.labels)){
+    yy.labels <- if(is.na(yy.name)) scale_y_continuous(name='',labels=NULL) else {
+      scale_y_continuous(name=yy.name,labels = comma);
+      };
+    };
+  out <- ggplot(data = pdata, aes_string(x = xx, y = yy)) + plot_type + yy.labels +
+    scale_x_discrete(name=xx.name,breaks=xx.breaks,labels=xx.labels) +
+    labs(title=title)
+  if(!missing(zz)) out <- out + aes_string(fill=zz) + fill;
+  if(counts){
+    ccrds<-ggplot_build(out)$layout$panel_ranges[[1]];
+    ann.label <- if(xx==TRUE && missing(zz)) nrow(pdata) else if(xx==TRUE){
+      paste0(table(pdata[,zz]),collapse=' \t ') } else if(missing(zz)){
+        paste0(table(pdata[,xx]),collapse=' \t ') } else {
+          apply(table(pdata[,c(xx,zz)]),1,function(ii) paste0(ii[!ii%in%list(0,'')],collapse=' \t '));
+        }
+    #ann.label <- gsub('\\b0\\b','',ann.label);
+    out <- out + annotate('text',x=ccrds$x.major_source,y=ccrds$y.range[1]
+                          ,label=ann.label[ccrds$x.major_source]);
+  }
+  attr(out,'call') <- match.call();
+  out;
+}
+
+getCall.data.frame <- getCall.gg <- function(xx) attr(xx,'call');
+
+
 #' From ... http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
 # Multiple plot function
 #
@@ -165,9 +221,13 @@ vartype <- function(dat, ctype) {
 #' TODO: instead of auto-committing, error if uncommited changes, needs to be 
 #' a deliberate process, otherwise we have tons of meaningless auto-commit
 #' messages that will make future maintenance harder
-gitstamp <- function() {
-  stopifnot(length(system("git diff-index HEAD --",intern = T))==0);
-  system("git push && git log --pretty=format:'%h' -n 1",intern=T);
+gitstamp <- function(production=T) {
+  if(production){
+    if(length(gitdiff<-system("git update-index --refresh && git diff-index HEAD --",intern = T))!=0) stop(sprintf(
+      "\ngit message: %s\n\nYou have uncommitted changes. Please do 'git commit' and then try again."
+      ,gitdiff));
+    system("git push && git log --pretty=format:'%h' -n 1",intern=T);
+  } else system("git log --pretty=format:'%h' -n 1",intern=T);
 }
 
 #' This function can be called from `stat_summary()` as the
@@ -178,6 +238,99 @@ n_fun <- function(xx) data.frame(y=mean(quantile(xx,c(.5,.75))),label=as.charact
 
 #' take a list of subset criteria and return a list of data.frames
 ssply<-function(dat,...) sapply(sys.call()[-(1:2)],function(ii) subset(dat,eval(ii)),simplify=F);
+
+#' save a named list of tables, including names
+savetablelist <- function(lst,fileprefix,filesuffix=paste0(format(Sys.Date(),'%m-%d-%Y-%H_%M_%S'),'.tsv')
+                            ,filepath='./',outfile=paste0(filepath,fileprefix,filesuffix)
+                          ,sep='\t',row.names=F
+                          ,singletabname=as.character(substitute(lst))
+                          ,replaceifexists=T,...) {
+  if(is.data.frame(lst)) lst<-setNames(list(lst),singletabname);
+  if(replaceifexists&&file.exists(outfile)) file.remove(outfile);
+  for(ii in names(lst)){
+  write(ii,file=outfile,append=T);
+  write.table(lst[[ii]],outfile,sep=sep,row.names=row.names,append=T);
+  }
+}
+
+#' Usage: `xx<-mapnames(xx,lookup)` where lookup is a named character vector
+#' the names of the elements in the character vector are what you are renaming
+#' things TO and the values are what needs to be matched, i.e. what renaming things
+#' FROM. If you set namesonly=T then it just returns the names, not the original
+#' object.
+mapnames<-function(xx,lookup,namesonly=F,...){
+  xnames <- names(xx);
+  idxmatch <- na.omit(match(xnames,lookup));
+  newnames <- names(lookup)[idxmatch];
+  if(namesonly) return(newnames);
+  names(xx)[xnames %in% lookup] <- newnames;
+  xx;
+}
+
+#' Forget modifying the columns to TRUE/FALSE... some of them have 'Unknown',
+#' NA, who knows what else. We can just do it dynamically when we need to. 
+#' This might even let us get rid of a couple of analytic columns.
+
+#' Example of using R methods dispatch
+#' 
+#' The actual usage is: `truthy(foo)` and `truthy()` itself figures
+#' out which method to actually dispatch.
+truthy <- function(xx,...) UseMethod('truthy');
+truthy.logical <- function(xx,...) xx;
+truthy.factor <- function(xx,...) truthy.default(as.character(xx),...);
+truthy.numeric <- function(xx,...) xx>0;
+truthy.default <- function(xx,truewords=c('TRUE','true','Yes','T','Y','yes','y')
+                           ,...) xx %in% truewords;
+
+countfrac <- function(xx,outcomes
+                      # set to TOTAL in order to do _only_ the total
+                      ,groupcols='rai_range',sortby=groupcols
+                      # set to 'none' if don't want to sort
+                      ,dir=c('desc','asc','none')
+                      ,summfns=c(n=sum,frac=mean)
+                      # set to '' to disable
+                      ,totalrow='Total'){
+  # callback, so this function can call itself even if it's renamed
+  # or nameless, for purposes of rerunning to get the totals row
+  if(totalrow!='') thisfn <- sys.function();
+  oo <- xx;
+  # is the function being invoked for the purpose of calculating a total row?
+  if(doingtotalrow <- tolower(trimws(groupcols[1]))=='total'){
+    oo[[groupcols]] <- totalrow;
+  };
+  oo <- group_by_(oo,groupcols);
+  # we coerce everything to logical, whatever it might have been
+  # but leave alone columns other than those specified in the 'outcomes' variable
+  oo[,outcomes] <- mutate_all(oo[,outcomes],truthy);
+  # Two different summary tables, the second one applies the same set of
+  # functions to everything, and the first one is just a count that doesn't 
+  # rely on any one specific column. So we do them separately and then cbind()
+  oo <- cbind(summarise(oo,bin_n=n()),summarise_all(oo[,c(groupcols,outcomes)],summfns)[,-1]) %>%
+    # creating cumul_count, as in the current code
+    mutate(cumul_count=rev(cumsum(rev(bin_n))));
+  # sort, if desired, just as in the current code
+  if(!doingtotalrow) oo <- switch(match.arg(dir)
+                                  ,none=oo
+                                  ,desc=arrange_(oo,sprintf('desc(%s)',groupcols))
+                                  ,asc=arrange_(oo,groupcols));
+  # now we insure that the column order is the same as the order of the groupcols
+  # argument-- first the grouping column name, then the 'bin_n' (used to be called
+  # rai_n, but this isn't specific to RAI, could group by anithing, so renamed)
+  # cumul_count...
+  oo <- oo[,c(groupcols,'bin_n','cumul_count'
+              # ...and then this: it pastes the suffixes as obtained from the names 
+              # of the summfns argument but orders them in the same way as they were
+              # given, rather than first the first summary function and then the second
+              ,c(t(outer(outcomes,names(summfns),paste,sep='_'))))];
+  if(!doingtotalrow&&totalrow!='') { 
+    tot <- thisfn(xx,outcomes,groupcols=totalrow,summfns=summfns,totalrow='');
+    names(tot)<-names(oo);
+    tot[[groupcols]] <- totalrow;
+    oo <- rbind(oo,tot);
+  }
+  attr(oo,'call') <- match.call();
+  oo;
+}
 
 #' ### Specific to RAI-A
 #' 
