@@ -1,0 +1,20 @@
+order	colname	colname_long	rule	locator	preferred_order	class	nunique	nna	c_naaccr	c_extra	c_notanalytic	c_date	c_tf	c_canceremr
+1	patient_num	De-ID Patient Number	header	patient_num	1	integer	2184	0	FALSE	FALSE	TRUE	FALSE	FALSE	FALSE
+2	start_date	Visit Date	header	start_date	2	Date	5176	0	FALSE	FALSE	FALSE	TRUE	FALSE	FALSE
+3	birth_date	Birth Date (Epic)	header	birth_date	3	Date	2050	0	FALSE	FALSE	FALSE	TRUE	FALSE	FALSE
+4	sex_cd	Sex (Epic)	header	sex_cd	5	character	2	0	FALSE	FALSE	FALSE	FALSE	FALSE	FALSE
+5	language_cd	Language (Epic)	header	language_cd	7	character	6	0	FALSE	FALSE	FALSE	FALSE	FALSE	FALSE
+6	race_cd	Race (Epic)	header	race_cd	8	character	11	0	FALSE	FALSE	FALSE	FALSE	FALSE	FALSE
+9	v001_TNM_Cln_Dscrptr	0980 TNM Clin Descriptor	naaccr	_TNM_Cln_Dscrptr	26	character	7	43695	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+10	v002_Mrtl_Sts_DX	0150 Marital Status at DX	naaccr	_Mrtl_Sts_DX	27	character	12	43667	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+11	v003_Rc	0160 Race 1	naaccr	_Rc	9	character	13	43667	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+12	v004_Rc	0161 Race 2	naaccr	_Rc	10	character	3	43674	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+13	v005_Rc	0162 Race 3	naaccr	_Rc	11	character	3	43674	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+14	v006_Rc	0163 Race 4	naaccr	_Rc	12	character	3	43674	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+15	v007_Spnsh_Hspnc	0190 Spanish/Hispanic Origin	naaccr	_Spnsh_Hspnc	14	character	11	43667	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+17	v009_Sx	0220 Sex	naaccr	_Sx	6	character	3	43667	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+19	v011_Brthplc	0250 Birthplace	naaccr	_Brthplc	16	character	55	43669	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+28	v018_Vtl_Sts	1760 Vital Status	naaccr	_Vtl_Sts	32	character	3	43780	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+34	v022_Cs_of_Dth	1910 Cause of Death	naaccr	_Cs_of_Dth	34	character	5	43780	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE
+35	v023_Dcsd_pr_SS	Deceased per SSA	code	_Dcsd_pr_SS	31	character	1	44629	FALSE	FALSE	FALSE	FALSE	TRUE	FALSE
+39	v026_Kdn_NS	Kidney, NOS	naaccr	_Kdn_NS	23	character	1	44311	TRUE	FALSE	FALSE	FALSE	TRUE	FALSE
