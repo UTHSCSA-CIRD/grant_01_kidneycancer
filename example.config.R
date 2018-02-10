@@ -17,3 +17,9 @@
 workdir <- '/tmp/grant_01_kidneycancer/';
 #' ## Used by run.R. Please put a path to your nsqip CSV file here.
 inputdata <- '/home/your_home_directory/Documents/project_folder';
+datadct <- paste0(dirname(inputdata),'/meta_',basename(inputdata));
+tcrcodes <- '/home/your_home_directory/Documents/cancer_registry_codebook.csv';
+outputdir <- workdir;
+#' this variable will determine which postprocessing steps are done in 
+#' run.R
+dowhat <- 'naaccr';
